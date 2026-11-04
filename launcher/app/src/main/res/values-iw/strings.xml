@@ -152,4 +152,8 @@
     <string name="clock_format_system">מערכת</string>
     <string name="clock_format_12">12 שעות</string>
     <string name="clock_format_24">24 שעות</string>
+    <string name="running_apps">יישומים פעילים</string>
+    <string name="kill_all_apps">סגור את כל היישומים</string>
+    <string name="no_running_apps">אין יישומים פעילים ברקע</string>
+    <string name="memory_freed">כל יישומי הרקע נסגרו · הזיכרון פונה</string>
 </resources>

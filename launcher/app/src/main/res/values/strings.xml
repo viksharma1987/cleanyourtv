@@ -158,4 +158,8 @@
     <string name="clock_format_system">System</string>
     <string name="clock_format_12">12-hour</string>
     <string name="clock_format_24">24-hour</string>
+    <string name="running_apps">Running apps</string>
+    <string name="kill_all_apps">Close all apps</string>
+    <string name="no_running_apps">No background apps running</string>
+    <string name="memory_freed">All background apps closed · Memory freed</string>
 </resources>

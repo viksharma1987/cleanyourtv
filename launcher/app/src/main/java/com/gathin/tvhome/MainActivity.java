@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ComponentCallbacks2;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -183,6 +184,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView greeting;
     private View clockBlock;
     private View btnInputs;
+    private View btnTasks;
+    private TasksOverlayDialog tasksOverlay;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
     private TextView btnWifi;
@@ -832,6 +835,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             else open(systemIntent(Settings.ACTION_SETTINGS));
         });
         btnReorder = findViewById(R.id.btnReorder);
+        btnTasks = findViewById(R.id.btnTasks);
+        if (btnTasks != null) btnTasks.setOnClickListener(v -> showTasksOverlay());
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
         if (!cfg.showNetworkPill) btnWifi.setVisibility(View.GONE);
@@ -913,9 +918,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
+        if (btnTasks != null) btnTasks.setOnKeyListener(pillKeys);
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
         if (advancedEffects) {
             List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnVpn, btnReorder, btnLibraryTop, btnSettings));
+            if (btnTasks != null) pills.add(btnTasks);
             pills.addAll(topAppButtons);
             for (View button : pills) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
@@ -1303,6 +1310,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
         cancelHoldOk();
+        if (tasksOverlay != null) {
+            tasksOverlay.dismiss();
+            tasksOverlay = null;
+        }
         root.removeCallbacks(showIdleClock);
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
@@ -1343,6 +1354,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
+        if (level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW || level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            MemoryGuard.ensureHeadroomAsync(this, null);
+        }
         // RUNNING_LOW and CRITICAL also arrive while Home is visible when an accessibility service keeps the
         // process in the foreground; never blank the screen the owner is looking at.
         if (!MemoryTrimPolicy.shouldRelease(level, started)) return;
@@ -1374,6 +1388,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onDestroy();
         RemoteKeys.release(this);
         cancelHoldOk();
+        if (tasksOverlay != null) {
+            tasksOverlay.dismiss();
+            tasksOverlay = null;
+        }
         if (gameDay != null) gameDay.shutdown();
         unregisterReceiver(packageReceiver);
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
@@ -1759,6 +1777,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     // ---- glass highlight -------------------------------------------------------------------------
+
+    private void showTasksOverlay() {
+        if (tasksOverlay != null) tasksOverlay.dismiss();
+        tasksOverlay = new TasksOverlayDialog(this, () -> {
+            tasksOverlay = null;
+            if (btnTasks != null && btnTasks.getVisibility() == View.VISIBLE) {
+                btnTasks.requestFocus();
+            }
+        });
+        tasksOverlay.show(root);
+    }
 
     @Override
     public void onLibraryRequested() {

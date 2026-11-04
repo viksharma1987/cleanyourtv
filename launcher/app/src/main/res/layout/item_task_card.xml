@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="160dp"
+    android:layout_height="180dp"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp"
+    android:focusable="true"
+    android:clickable="true"
+    android:background="@drawable/card_running_app_bg">
+
+    <ImageView
+        android:id="@+id/cardIcon"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/cardLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:fontFamily="@string/font_medium" />
+
+</LinearLayout>
+
