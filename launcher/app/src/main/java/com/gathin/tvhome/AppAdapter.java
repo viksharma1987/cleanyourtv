@@ -552,6 +552,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (ctx.getPackageManager().resolveActivity(byAction, 0) != null) i = byAction;
         }
         try {
+            MemoryGuard.ensureHeadroomAsync(ctx, e.pkg);
+            MemoryGuard.recordAppLaunched(e.pkg);
             ctx.startActivity(i);
             if (cinematic) LastOpened.record(ctx, e.pkg);
             if (advancedEffects && !reducedMotion && ctx instanceof Activity) {

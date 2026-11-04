@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlayScrim"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E60A0A0F"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingTop="36dp"
+        android:paddingBottom="28dp">
+
+        <!-- Header -->
+        <TextView
+            android:id="@+id/overlayTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/running_apps"
+            android:textColor="#FFFFFFFF"
+            android:textSize="24sp"
+            android:fontFamily="@string/font_medium"
+            android:letterSpacing="0.04" />
+
+        <TextView
+            android:id="@+id/ramStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#B3FFFFFF"
+            android:textSize="14sp"
+            android:fontFamily="@string/font_regular" />
+
+        <!-- Middle: Horizontal Cards Container -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp">
+
+            <HorizontalScrollView
+                android:id="@+id/cardsScrollView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="none"
+                android:clipToPadding="false"
+                android:clipChildren="false"
+                android:paddingStart="64dp"
+                android:paddingEnd="64dp">
+
+                <LinearLayout
+                    android:id="@+id/cardsContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:clipChildren="false"
+                    android:clipToPadding="false" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/emptyMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/no_running_apps"
+                android:textColor="#80FFFFFF"
+                android:textSize="18sp"
+                android:fontFamily="@string/font_regular"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- Bottom: Kill All Button & Label -->
+        <LinearLayout
+            android:id="@+id/bottomKillGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageButton
+                android:id="@+id/btnKillAll"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/round_kill_button_bg"
+                android:src="@drawable/ic_close_white"
+                android:contentDescription="@string/kill_all_apps"
+                android:focusable="true"
+                android:scaleType="center"
+                android:nextFocusUp="@+id/cardsScrollView" />
+
+            <TextView
+                android:id="@+id/killAllLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/kill_all_apps"
+                android:textColor="#B3FFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@string/font_medium" />
+
+            <TextView
+                android:id="@+id/feedbackMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#81C784"
+                android:textSize="14sp"
+                android:fontFamily="@string/font_medium"
+                android:visibility="gone" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>
+
