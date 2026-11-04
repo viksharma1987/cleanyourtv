@@ -48,7 +48,20 @@ public final class QuickSettingsActivity extends Activity {
         // Through Home, so it rebuilds with the new choices when Launcher settings closes.
         addRow(rows, R.drawable.ic_home_settings, R.string.launcher_settings, 0,
                 new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_LAUNCHER_SETTINGS));
+        addVersionLine(rows);
         rows.getChildAt(0).requestFocus();
+    }
+
+    private void addVersionLine(LinearLayout rows) {
+        TextView v = new TextView(this);
+        v.setText(BuildInfo.VERSION_LABEL);
+        v.setTextColor(0x77FFFFFF);
+        v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
+        v.setGravity(android.view.Gravity.CENTER);
+        v.setPadding(0, Math.round(10 * getResources().getDisplayMetrics().density), 0, Math.round(4 * getResources().getDisplayMetrics().density));
+        v.setFocusable(false);
+        v.setClickable(false);
+        rows.addView(v);
     }
 
     /** Settings pressed again while the panel is up. */

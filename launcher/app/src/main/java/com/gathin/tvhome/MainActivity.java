@@ -830,9 +830,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ((TextView) btnSettings).setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_home_settings_pill, 0, 0, 0);
         }
         btnSettings.setOnClickListener(v -> {
-            if (launcherSettingsButton) startActivityForResult(
+            if (settingsKeyPanel) open(new Intent(this, QuickSettingsActivity.class));
+            else if (launcherSettingsButton) startActivityForResult(
                     new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
-            else open(systemIntent(Settings.ACTION_SETTINGS));
+            else showSettingsMenu();
         });
         btnReorder = findViewById(R.id.btnReorder);
         btnTasks = findViewById(R.id.btnTasks);
@@ -3755,12 +3756,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         // A launcher may not restart the TV itself; the Home key helper can open the system power menu instead.
         if (HomeKeyService.canOpenPowerMenu()) addSettingsMenuRow(rows, popup, R.string.power_menu, HomeKeyService::openPowerMenu);
+        addVersionLine(rows);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
                 ? Gravity.START : Gravity.END);
         rows.getChildAt(0).requestFocus();
+    }
+
+    private void addVersionLine(LinearLayout rows) {
+        TextView v = new TextView(this);
+        v.setText(BuildInfo.VERSION_LABEL);
+        v.setTextColor(0x77FFFFFF);
+        v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        v.setGravity(Gravity.CENTER);
+        v.setPadding(0, Math.round(10 * density), 0, Math.round(4 * density));
+        v.setFocusable(false);
+        v.setClickable(false);
+        rows.addView(v);
     }
 
     /** A tile configured with launch_actions "input:<id>" (config.xml): switch to that TV input directly,
