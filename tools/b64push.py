@@ -125,6 +125,18 @@ def main():
                          "Nothing was sent to the TV.\n")
         dev.close()
         return 2
+    verify_command = f"base64 -d < {q(b64)} > {q(part)} && md5sum {q(part)}; rm -f {q(b64)}"
+    # This repeats the path four times and is longer than the other fixed commands. adb_shell's
+    # filesync chunk size is at most half its negotiated payload, not a shell command limit; the
+    # native adapter states its own limit. Leave room for the service prefix and terminating NUL.
+    command_limit = getattr(dev, "max_shell_command_size", 2 * dev.max_chunk_size - len(b"shell:\0"))
+    verify_size = len(verify_command.encode("utf-8"))
+    if verify_size > command_limit:
+        sys.stderr.write(f"refusing remote path {remote!r}: verification needs a {verify_size}-byte "
+                         f"shell command at this transport's {command_limit}-byte command limit. "
+                         "Use a shorter remote path. Nothing was sent to the TV.\n")
+        dev.close()
+        return 2
     try:
         # Only our own temporary names are cleared; the target stays until the copy is verified.
         # `: >` creates the base64 file even for an empty upload, so `base64 -d` has an input.
@@ -143,8 +155,7 @@ def main():
             print(f"\rchunk {i + 1}/{n}", end="", flush=True)
         if n:
             print(flush=True)
-        out = dev.shell(f"base64 -d < {q(b64)} > {q(part)} && md5sum {q(part)}; rm -f {q(b64)}",
-                        read_timeout_s=120.0)
+        out = dev.shell(verify_command, read_timeout_s=120.0)
         got = out.split()[0] if out.strip() else ""
         ok = got == want
         # A match stays on stdout, where the photo and news screensaver scripts look for "md5".
@@ -155,7 +166,8 @@ def main():
             print(f"{remote} was left as it was.", file=sys.stderr)
             return 1
         out = dev.shell(f"mv -f {q(part)} {q(remote)} && echo moved", read_timeout_s=60.0)
-        if "moved" not in out:
+        # The marker's own line: a refusal that names a path containing "moved" is not a move.
+        if "moved" not in (line.strip() for line in out.splitlines()):
             # SELinux on a TCL ak30a5 (20250610) refuses rename(2) in /data/local/tmp while cp works
             # there (#1588). Copy the verified file over the target instead and check that copy too.
             # Unlike the move it is not atomic: a copy that stops part-way can leave the target

@@ -2,11 +2,13 @@
 the file the front page displays.
 
 Run tools/readme_stats.py and tools/readme_featured.py first, then:
-python3 tools/readme_card.py Fredoka.ttf docs/card.jpg
-python3 tools/readme_card.py --halloween Fredoka.ttf docs/card-halloween.jpg   # the October variant
+
+    tools/venv/bin/python -I tools/readme_card.py Fredoka.ttf docs/card.jpg
+    tools/venv/bin/python -I tools/readme_card.py --halloween Fredoka.ttf docs/card-halloween.jpg   # the October variant
+
 The Halloween variant keeps the layout and the generated numbers: it shows docs/stats-halloween.png
-(python3 tools/readme_stats.py --halloween Fredoka.ttf docs/stats-halloween.png: the same numbers in pumpkin
-orange), recolours the headings to orange, adds a thin dripping stripe and a few bats, and
+(tools/venv/bin/python -I tools/readme_stats.py --halloween Fredoka.ttf docs/stats-halloween.png: the same
+numbers in pumpkin orange), recolours the headings to orange, adds a thin dripping stripe and a few bats, and
 shows docs/new-home-halloween.jpg as AFTER. docs/card.jpg is not touched, so the README goes back with one line.
 Fredoka is the variable TTF from Google Fonts, and its file is not in this repo: pass the path of the
 copy you downloaded. The four pictures it stacks are this checkout's own - docs/stock-home.jpg,
@@ -14,6 +16,9 @@ docs/new-home.jpg and the two its siblings draw - so run it from the repository 
 """
 import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import picture_file  # noqa: E402  the staged write the wallpaper scripts use
 
 USAGE = ("usage: readme_card.py [--halloween] <font.ttf> <out.jpg>\n"
          "  Fredoka, the variable TTF from Google Fonts, is not in this repo: download it and pass the\n"
@@ -44,8 +49,17 @@ def out_problem(path):
     `img.save()` answers a folder with IsADirectoryError, a path through a file with NotADirectoryError,
     a folder that is not there with FileNotFoundError and a name with no extension with `unknown file
     extension` - each a traceback that names neither the argument nor whether a picture was written.
+    An empty name is its own case, because `$OUT` unset is how a reader reaches it: no path at all, and
+    a message that starts with a space.
     Judged here, before Pillow is imported, so a machine without Pillow gives the same answer.
     """
+    if not path.strip():
+        # The name came out empty, which is not a path at all: `$OUT` unset is how a reader meets it.
+        # Pillow's answer for it is `unknown file extension: ` - a message that starts with a space and
+        # names neither the argument nor the variable, so the shape has its own words here.
+        return (f"the picture was given as {path!r}, an empty name, so no picture would be written: "
+                f"name the file, e.g. docs/card.jpg - and if the name came from a shell variable, "
+                f"that variable was empty")
     if os.path.isdir(path):
         return (f"{path} is a folder, and this writes one picture: pass a file name such as "
                 f"docs/card.jpg")
@@ -65,7 +79,8 @@ FONT, OUT = font_and_out(sys.argv)
 # The picture is the other argument the reader types, and Pillow only refuses it after the whole thing
 # has been drawn: a folder, a folder that is not there, a path through a file and a suffixless name were
 # each a 12-line traceback with exit 1, the code a run that wrote nothing returns, saying nothing about
-# what was written. Judged before the Pillow import, so a machine without it answers the same way.
+# what was written. A name that came out empty is judged here too: Pillow answers it the same way, in
+# words that start with a space. Judged before the Pillow import, so a machine without it answers the same way.
 OUT_PROBLEM = out_problem(OUT)
 if OUT_PROBLEM:
     sys.exit(f"{OUT_PROBLEM}. Nothing was written.")
@@ -240,8 +255,10 @@ for i, p in enumerate(parts):
 if HALLOWEEN:
     decorate(card)
 try:
-    card.save(OUT, quality=88, optimize=True)
+    picture_file.save(card, OUT, quality=88, optimize=True)
 except (OSError, ValueError) as error:
-    # The read-only folder or the full disk, or an extension Pillow does not know (`.txt`): found at the
-    # write, after the drawing. Name the file and say that no picture came of the run.
+    # The read-only file, the full disk or an extension Pillow does not know (`.txt`) is found at the
+    # write, after the drawing: the card is encoded beside the file and renamed into place first, so
+    # the docs/card.jpg the front page shows is intact, and this line is true - the old img.save() opened
+    # the destination before encoding and left it cut short.
     sys.exit(f"cannot write {OUT}: {error}. Nothing was written.")

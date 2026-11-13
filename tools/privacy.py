@@ -31,7 +31,9 @@ stdout away still shows.
 """
 import os
 import re
+import shlex
 import sys
+import tempfile
 
 # Names from the TV end up inside commands run by its shell, so nothing that could carry shell syntax
 # goes through. Same rule as tools/recovery.py.
@@ -379,6 +381,7 @@ def list_lines(result, include_low, name):
                          "on the TV. Run the audit again to read them.")
     # The file outlives this run and may be shared (docs/workflows/tv-list.md), so the header uses
     # the placeholder every list uses rather than the TV's address.
+    name = shlex.quote(os.fspath(name))
     lines = [
         "# Privacy audit written by tools/privacy.py.",
         "# Voice, ACR and telemetry candidates this TV answered for. Everything is DISABLED, not",
@@ -417,7 +420,7 @@ def target_problem(path):
         # it through is an IsADirectoryError after the whole audit.
         return (f"{path} is a folder, and --write takes a file name to create, "
                 f"e.g. {os.path.join(path, 'privacy.txt')}.")
-    if os.path.exists(path):
+    if os.path.lexists(path):
         # A second audit of the same TV may legitimately differ, but silently replacing a list the
         # owner is about to apply is how a hand edit disappears.
         return f"{path} already exists; move it aside or choose another name."
@@ -437,8 +440,29 @@ def write_list(path, result, include_low):
     lines = list_lines(result, include_low, os.path.basename(path) if os.path.isabs(path) else path)
     text = "\n".join(lines) + "\n"
     try:
-        with open(path, "w") as f:
-            f.write(text)
+        if os.name == "nt":
+            # A sibling inherits the destination folder's ACL. Windows rename refuses existing
+            # entries, including dangling symlinks which open("x") can follow on Windows.
+            staged = None
+            try:
+                with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", prefix=".privacy-",
+                                                 suffix=".tmp", dir=os.path.dirname(path) or ".",
+                                                 delete=False) as f:
+                    staged = f.name
+                    f.write(text)
+                os.rename(staged, path)
+                staged = None
+            finally:
+                if staged is not None:
+                    try:
+                        os.unlink(staged)
+                    except FileNotFoundError:
+                        pass
+        else:
+            # A failed write may leave this newly created file. Do not unlink a path another
+            # process could have replaced after creation.
+            with open(path, "x", encoding="utf-8") as f:
+                f.write(text)
     except OSError as error:
         # The audit is two shell calls for each package it probed, slow on old firmware: a file the
         # folder would not take should not cost the owner a second run of it. What was to be written
@@ -453,8 +477,9 @@ def write_list(path, result, include_low):
         print(f"{result['skipped']} more name matches were not probed (the audit stops at "
               f"{MAX_PROBES}), so the list leaves them out; check them by hand with "
               "`dumpsys package <name>`.")
-    print(f"apply:   TV_HOST={os.environ.get('TV_HOST', '<tv ip>')} tools/disable.sh {path}")
-    print(f"undo:    TV_HOST={os.environ.get('TV_HOST', '<tv ip>')} tools/restore.sh {path}")
+    quoted_path = shlex.quote(os.fspath(path))
+    print(f"apply:   TV_HOST={os.environ.get('TV_HOST', '<tv ip>')} tools/disable.sh {quoted_path}")
+    print(f"undo:    TV_HOST={os.environ.get('TV_HOST', '<tv ip>')} tools/restore.sh {quoted_path}")
     print("read it first: the comments say what each one takes with it.")
 
 
