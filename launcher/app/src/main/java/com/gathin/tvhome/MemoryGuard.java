@@ -42,8 +42,8 @@ final class MemoryGuard {
 
     /** In-memory LRU tracking of user apps launched from Home or remote. */
     private static final List<String> SESSION_LAUNCHED = Collections.synchronizedList(new ArrayList<>());
-    /** Epoch timestamp of the last "Kill All" action; only apps launched AFTER this timestamp are displayed. */
-    private static volatile long lastKillTimestamp = 0;
+    /** Epoch timestamp of the last "Kill All" action; initialized to startup time so old boot events are not shown. */
+    private static volatile long lastKillTimestamp = System.currentTimeMillis();
 
     static void recordAppLaunched(String pkg) {
         if (pkg == null) return;
@@ -91,18 +91,15 @@ final class MemoryGuard {
 
     /**
      * Executes asynchronously in parallel with app launch so the foreground launch
-     * is not delayed by even 1 millisecond. Purges background user apps if free RAM
-     * is below the threshold, leaving the launching app exempt.
+     * is not delayed by even 1 millisecond. Proactively purges idle background apps
+     * leaving the launching app exempt.
      */
     static void ensureHeadroomAsync(Context context, String exemptPackage) {
         if (context == null) return;
         Context appCtx = context.getApplicationContext();
         EXECUTOR.execute(() -> {
             try {
-                if (isMemoryTight(appCtx)) {
-                    Log.i(TAG, "Memory tight before launch. Purging idle background apps in background...");
-                    purgeBackgroundUserApps(appCtx, exemptPackage);
-                }
+                purgeBackgroundUserApps(appCtx, exemptPackage);
             } catch (Throwable t) {
                 Log.w(TAG, "Headroom check failed: " + t.getMessage());
             }
@@ -168,7 +165,7 @@ final class MemoryGuard {
         UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
         if (usm != null && result.size() < 12) {
             long now = System.currentTimeMillis();
-            long since = lastKillTimestamp > 0 ? lastKillTimestamp : (now - 1000L * 3600L * 2L);
+            long since = lastKillTimestamp > 0 ? lastKillTimestamp : (now - 1000L * 60L * 30L);
             if (now > since) {
                 try {
                     android.app.usage.UsageEvents events = usm.queryEvents(since, now);
@@ -240,7 +237,41 @@ final class MemoryGuard {
                 Log.w(TAG, "Failed to kill " + pkg + ": " + t.getMessage());
             }
         }
+
+        // Also terminate background processes of known heavy media/streaming apps if idle
+        Set<String> launchables = getLaunchablePackages(pm);
+        for (String pkg : launchables) {
+            if (pkg == null || pkg.equals(myPkg) || pkg.equals(exemptPkg) || killed.contains(pkg)) {
+                continue;
+            }
+            if (isHeavyMediaPackage(pkg)) {
+                try {
+                    am.killBackgroundProcesses(pkg);
+                    killed.add(pkg);
+                    Log.d(TAG, "Killed heavy background media app: " + pkg);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+
         return killed.size();
+    }
+
+    private static boolean isHeavyMediaPackage(String pkg) {
+        if (pkg == null) return false;
+        return pkg.equals("com.netflix.ninja")
+                || pkg.equals("in.startv.hotstar")
+                || pkg.equals("com.amazon.amazonvideo.livingroom")
+                || pkg.equals("com.google.android.youtube.tv")
+                || pkg.equals("com.jio.media.ondemand")
+                || pkg.equals("com.graymatrix.did")
+                || pkg.equals("com.sonyliv")
+                || pkg.equals("org.videolan.vlc")
+                || pkg.equals("org.xbmc.kodi")
+                || pkg.equals("com.plexapp.android")
+                || pkg.equals("com.apple.atve.androidtv.appletv")
+                || pkg.equals("com.disney.disneyplus")
+                || pkg.equals("com.spotify.tv.android");
     }
 
     private static Set<String> getLaunchablePackages(PackageManager pm) {
